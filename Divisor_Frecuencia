@@ -1,0 +1,8 @@
+`timescale 1ns / 1ps
+
+module Divisor_Frecuencia(clk ,out_clk);
+output reg out_clk;
+input clk ;
+always @(posedge clk)
+    out_clk <= ~out_clk;
+endmodule
