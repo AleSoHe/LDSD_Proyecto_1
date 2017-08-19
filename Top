@@ -1,1 +1,32 @@
+`timescale 1ns / 1ps
 
+module Top_Mod(
+    input clk,
+    input [2:0] sw,
+    input reset,
+    output vsync,
+    output hsync,
+    output [2:0] rgb
+    );
+    
+    reg [2:0] rgb_reg;
+    wire video_on;
+    wire CableClk;
+    // instantiate vga sync circuit
+    vga_sync vgasync_unit
+    (.clk(CableClk), .reset (reset), .hsync(hsync), .vsync(vsync),
+    .video_on(video_on), .p_tick(), .pixel_x(), .pixel_y ());
+    
+    Divisor_Frecuencia DivFrec_unit
+   (.clk(clk), .out_clk(CableClk));
+    
+    // rgb b u f f e r
+    always @ (posedge clk, posedge reset)
+        if (reset)
+            rgb_reg <= 0;
+        else
+            rgb_reg <= sw;
+    // output
+    assign rgb = (video_on) ? rgb_reg : 3'b0;
+    
+endmodule
