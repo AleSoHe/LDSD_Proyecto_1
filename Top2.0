@@ -1,0 +1,49 @@
+`timescale 1ns / 1ps
+
+module Top_Mod(
+    input clk,
+    input [1:0] Sw_Escala,
+    input [2:0] Let_Color,
+    input reset,
+    output vsync,
+    output hsync,
+    output [2:0] rgb
+   
+    );
+    
+    reg [2:0] rgb_reg;
+    wire video_on;
+    wire CableClk;
+    wire [9:0] CableX, CableY;
+    wire [2:0] Cablergb;
+    wire CableP_tick;
+    wire Font_bit;
+
+    
+    // instantiate vga sync circuit
+    vga_sync vgasync_unit
+    (.clk(CableClk), .reset (reset), 
+    .hsync(hsync), .vsync(vsync),
+    .video_on(video_on), .p_tick(CableP_tick), 
+    .pixel_x(CableX), .pixel_y (CableY));
+    
+    Divisor_Frecuencia DivFrec_unit
+   (.clk(clk), .out_clk(CableClk));
+    
+   font_test_gen font_test_unit
+       (.clk(CableP_tick), 
+       .video_on(video_on),
+       .pixel_x(CableX), 
+       .pixel_y(CableY),
+       .Cable_Color(Let_Color),
+       .escala(Sw_Escala),
+       .rgb_text(Cablergb));
+        
+    
+  always @(posedge clk)
+          if (CableP_tick && video_on)
+             rgb_reg <= Cablergb;
+       // output
+       assign rgb = rgb_reg;
+   
+endmodule
