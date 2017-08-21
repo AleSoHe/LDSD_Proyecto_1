@@ -1,0 +1,118 @@
+`timescale 1ns / 1ps
+
+module font_test_gen
+   (
+    input wire clk,
+    input wire video_on,
+    input wire [9:0] pixel_x, pixel_y,
+    input wire [2:0] Cable_Color,
+    input wire [1:0] escala, //conectar a un sw
+    output reg [2:0] rgb_text
+   );
+
+   // signal declaration
+   wire [10:0] rom_addr;   
+   wire [7:0] font_word;
+   
+   wire font_bit, text_bit_on;
+   
+   
+   wire [3:0] row_addr_g;
+   wire [2:0] bit_addr_g;
+   reg [3:0] row_addr;
+   reg [2:0] bit_addr;
+   
+   reg [6:0] char_addr, char_addr_g;
+   
+   reg [2:0]pix_x;
+   reg [3:0]pix_y;
+   
+   reg [6:0]cord_x;
+   reg [5:0]cord_y;
+
+   reg [6:0]limite_x;
+   reg [5:0]limite_y;
+
+
+   // instantiate font ROM
+   font_rom font_unit
+      (.clk(clk), .addr(rom_addr), .data(font_word));
+  
+   
+   always @*
+        case(escala)
+            2'b00: 
+                begin
+                    pix_x = pixel_x[2:0];
+                    pix_y = pixel_y[3:0];
+                    cord_x = 34;
+                    cord_y = 15;
+                    limite_x = pixel_x[9:3];
+                    limite_y = pixel_y[9:4];
+                end
+                
+            2'b01:
+                begin
+                    pix_x = pixel_x[3:1];               
+                    pix_y = pixel_y[4:1];
+                    cord_x = 15;
+                    cord_y = 7;
+                    limite_x = pixel_x[9:4];
+                    limite_y = pixel_y[9:5];
+                end
+            2'b10:
+                begin
+                    pix_x = pixel_x[4:2];               
+                    pix_y = pixel_y[5:2];
+                    cord_x = 5;
+                    cord_y = 3;
+                    limite_x = pixel_x[9:5];
+                    limite_y = pixel_y[9:6];
+                end
+        endcase
+        
+   assign text_bit_on = limite_x >= cord_x && limite_x <= cord_x+11 && limite_y == cord_y;
+   assign row_addr_g = pix_y; 
+   assign bit_addr_g = pix_x;
+   
+   always @*
+   if(text_bit_on)
+   begin
+          case (limite_x)
+              cord_x: char_addr_g = 7'h48;
+              cord_x+1: char_addr_g = 7'h45;
+              cord_x+2: char_addr_g = 7'h4c;
+              cord_x+3: char_addr_g = 7'h4c;
+              cord_x+4: char_addr_g = 7'h4f;
+              cord_x+5: char_addr_g = 7'h00;
+              cord_x+6: char_addr_g = 7'h57;  
+              cord_x+7: char_addr_g = 7'h4f;
+              cord_x+8: char_addr_g = 7'h52;
+              cord_x+9: char_addr_g = 7'h4c;
+              cord_x+10: char_addr_g = 7'h44;
+              cord_x+11: char_addr_g = 7'h21;   
+              default char_addr_g = 7'h00;
+          endcase
+    end
+    
+    
+ always @*
+        begin
+            if (text_bit_on)
+                begin
+                    char_addr = char_addr_g;
+                    row_addr = row_addr_g;
+                    bit_addr = bit_addr_g;
+                    if (~font_bit)
+                        rgb_text = 3'b000; // blank
+                    else
+                        rgb_text = Cable_Color;  // green
+                 end
+             else
+                 rgb_text = 3'b000;  // black
+         end
+           
+        assign rom_addr = {char_addr, row_addr};
+        assign font_bit = font_word[~bit_addr];
+   
+endmodule
