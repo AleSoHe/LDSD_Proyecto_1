@@ -1,4 +1,19 @@
 `timescale 1ns / 1ps
+////////////////////////////////////////////////////////////////////////
+// Módulo de sincronización del VGA
+// Toma el reloj y le envía señales al VGA para el funcionamiento de este (deszplazamiento de posición para desplegar pixeles),
+// para una resolución de 640x480
+//
+// ENTRADAS:
+//          clk: señal a 50 MHz 
+//          reset: señal de reseteo de pantalla
+// SALIDAS
+//          hsync, vsync: señales de sincronización horizontal y vertical del VGA, necesarias para el desplazamiento de la posición de despliegue          
+//          video_on: señal de encendido. Advierte cuando la posición está dentro o fuera de los bordes de la pantalla
+//          p_tick: señal para desplegar un pixel
+//          pixel_x, pixel_y: posiciones horizontal y vertical
+/////////////////////////////////////////////////////////////////////////
+
 module vga_sync
 (
 input wire clk, reset,
@@ -6,9 +21,8 @@ output wire hsync , vsync , video_on, p_tick,
 output wire [9:0] pixel_x, pixel_y
 );
 
-// constantdeclaration
-// VGA 640-by-480 sync parameters
-localparam HD = 640; 
+// Declaración de constantes: parámetros de sincronización para 640x480
+localparam HD = 640;   
 localparam HF = 48 ;
 localparam HB = 16 ;
 localparam HR = 96 ;
@@ -17,25 +31,25 @@ localparam VF = 10;
 localparam VB = 33;
 localparam VR = 2;
 
-// mod_2 counter
-reg mod2_reg;
+// Submódulo Contador: para dividir la frecuencia del reloj en 2
+reg mod2_reg;    
 wire mod2_next;
 
-// sync counters
+// Señales para contadores de sincronización horizontal y vertical
 reg [9:0] h_count_reg, h_count_next;
 reg [9:0] v_count_reg , v_count_next;
 
-// outpzit buffer
+// Buffers de sincronización
 reg v_sync_reg , h_sync_reg;
 wire v_sync_next , h_sync_next;
 
-// status signal
+// Señales de estado
 wire h_end , v_end , pixel_tick;
 
-// body
-// registers
-always @ ( posedge clk , posedge reset)
-    if (reset)
+// CUERPO
+
+always @ ( posedge clk , posedge reset)   // Se activan las siguientes instrucciones cuando hay un flanco positivo de reloj o un flanco de la señal reset
+    if (reset)  // En caso de reset=1, se inicializan los valores de sincronización y cuenta a 0
         begin
             mod2_reg <= 1'b0;
             v_count_reg <= 0;
@@ -43,39 +57,39 @@ always @ ( posedge clk , posedge reset)
             v_sync_reg <= 1'b0;
             h_sync_reg <= 1'b0;
         end
-    else
+    else   // Si no hay reset, realiza las siguientes instrucciones
         begin
-            mod2_reg <= mod2_next;
-            v_count_reg <= v_count_next;
-            h_count_reg <= h_count_next;
-            v_sync_reg <= v_sync_next ;
+            mod2_reg <= mod2_next;          // cambia de 0 a 1 o de 1 a 0 el valor del registro (división de reloj)
+            v_count_reg <= v_count_next;    // Asigna los siguientes valores de cuenta vertical y horizontal 
+            h_count_reg <= h_count_next;    
+            v_sync_reg <= v_sync_next ;     // Asigna los siguientes valores de sincronización vertical y horizontal
             h_sync_reg <= h_sync_next ;
         end
 
-// mod_2 ciruit  to generate 25 MHz enable tick
+// División del reloj a 25 MHz
 assign mod2_next = ~mod2_reg;
 assign pixel_tick = mod2_reg;
 
-// status signals
-// end of horizontal counter (799)
+// SEÑALES DE ESTADO
+// le asigna 1 a la variable h_end cuando el contador horizontal llega al límite de la pantalla
 assign h_end = (h_count_reg==(HD+HF+HB+HR-1));
 
-// end of vertical counter (524)
+// le asigna 1 a la variable v_end cuando el contador vertical llega al límite de la pantalla
 assign v_end = (v_count_reg==(VD+VF+VB+VR-1));
 
-// next-statelogic of mod-800 horizontal sync counter
+//  Lógica del contador horizontal
 always @*
-    if (pixel_tick) // 25 MHz pulse
+    if (pixel_tick)     // Cuando hay un pulso, si se llega al límite horizontal, reinicia la cuenta, si no, sigue aumentando dicha cuenta en 1
         if (h_end)
             h_count_next = 0 ;
-        else
+        else       
             h_count_next = h_count_reg + 1;
     else
         h_count_next = h_count_reg;
 
-// next-state logic of mod-525 vertical sync counter
+// Lógica del contador vertical
 always @*
-    if (pixel_tick & h_end)
+    if (pixel_tick & h_end)  // cuadno hay un pulso y se llegó al límite horizontal, si se llegó al límite vertical, se reinicia la cuenta; si no, se suma 1
         if (v_end)
             v_count_next = 0;
         else
@@ -83,9 +97,8 @@ always @*
     else
         v_count_next = v_count_reg;
 
-// horizontal and vertical sync, buffered to avoid glitch
+// Se aplican buffers en la sincronización para prevenir glitches
 // h_svnc_next asserted between 656 and 751
-
 assign h_sync_next = (h_count_reg>=(HD+HB) &&
                     h_count_reg<=(HD+HB+HR-1));
 
