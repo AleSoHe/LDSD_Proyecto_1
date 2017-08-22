@@ -3,6 +3,10 @@
 module Divisor_Frecuencia(clk ,out_clk);
 output reg out_clk;
 input clk ;
-always @(posedge clk)
-    out_clk <= ~out_clk;
+
+// Este módulo toma los 100 MHz del reloj de la FPGA y lo divide en 2; es decir, crea un reloj a 50 MHz, de forma
+// que se pueda acoplar a la frecuencia necesaria para otros módulos.
+
+always @(posedge clk)  // Siempre que hay un flanco positivo del reloj
+    out_clk <= ~out_clk;  // cambia el valor lógico de la salida, por lo que la frecuencia de out_clk es la mitad de clk
 endmodule
