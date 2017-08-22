@@ -1,10 +1,13 @@
-// ROM with synchonous read (inferring Block RAM)
-// character ROM
-//  - 8-by-16 (8-by-2^4) font
-//  - 128 (2^7) characters
-//  - ROM size: 512-by-8 (2^11-by-8) bits
-//              16K bits: 1 BRAM
+// Módulo de ROM para las letras a desplegar implementado con memoria RAM
+// 128 (2^7) caracteres de 8x16 
 
+// ENTRADAS:
+//	clk: se implementa un reloj para que la síntesis cree la memoria utilizando la RAM de la FPGA
+//	addr : es la dirección para acceder a los datos de los caracteres. Los 7 bits MSB direccionan el caracter y los 4 bits LSB direccionan la fila de dicho caracter  
+
+// SALIDAS:
+//	data : 8 bits. 8 valores que representan el estado del pixel (encendido o apagado) en el eje horizontal de la fila direccionada.
+	
 module font_rom
    (
     input wire clk,
@@ -12,15 +15,15 @@ module font_rom
     output reg [7:0] data
    );
    
-   // signal declaration
-   reg [10:0] addr_reg; 
+  // DECLARACIÓN DE SEÑALES
+   reg [10:0] addr_reg;     	// Registro de la dirección de entrada
 
-   // body
-   always @(posedge clk) 
+   // CUERPO
+   always @(posedge clk)	// Se asigna el valor de la dirección al registro solo en los flancos positivos de reloj 
       addr_reg <= addr;
       
-   always @*
-      case (addr_reg)
+   always @*			// Sensibilidad con addr_reg; es decir, cada vez que cambie (en un flanco positivo de reloj), se produce un redireccionamiento de la memoria
+      case (addr_reg)		// De aquí en adelante, se toma el valor de addr_reg para tomar una dirección y poner la información en la salida.
          //code x00
          11'h000: data = 8'b00000000; // 
          11'h001: data = 8'b00000000; // 
