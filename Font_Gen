@@ -1,47 +1,72 @@
 `timescale 1ns / 1ps
 
-module font_test_gen
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// Módulo que se encarga de mostrar las letras en la pantalla, de hacer el escalamiento y cambiar el color de las mismas.
+// 
+// ENTRADAS 
+//    clk es la señal de reloj de MHz necesaria para poder obtener los tiles del modulo font_rom
+//    video_on es un 1 o 0 que indica si la pantalla esta encendida o no
+//    pixel_x y pixel_y son los contadores que permiten ubicarse en la pantalla
+//    Cable_Color es un bus de 3 bits que viene de los interruptores para cambiar de color
+//    escala es un bus de 2 bits que permite hacer el cambio de tamaño de la letra
+//
+// SALIDA
+//    rgb_text es un registro que guarda el color seleccionado para las letras en la pantalla
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+module font_gen
    (
     input wire clk,
     input wire video_on,
     input wire [9:0] pixel_x, pixel_y,
     input wire [2:0] Cable_Color,
-    input wire [1:0] escala, //conectar a un sw
+    input wire [1:0] escala
     output reg [2:0] rgb_text
    );
 
-   // signal declaration
+   // Declaración de señales
+   
+   // Para obtener las letras necesarias
    wire [10:0] rom_addr;   
    wire [7:0] font_word;
-   
+    
+    // Para pintar cada pixel en el sitio correcto
    wire font_bit, text_bit_on;
    
-   
+   // Para formar las letras con proporciones adecuadas y realizar el escalamiento
    wire [3:0] row_addr_g;
    wire [2:0] bit_addr_g;
    reg [3:0] row_addr;
    reg [2:0] bit_addr;
    
+   // Representa la letra que se pinta
    reg [6:0] char_addr, char_addr_g;
    
+   // Guarda el rango de bits necesario para crear los diferentes tamaños
    reg [2:0]pix_x;
    reg [3:0]pix_y;
    
+   // Definen el inicio para pintar las letras
    reg [6:0]cord_x;
    reg [5:0]cord_y;
 
+   // Contadores de tiles
    reg [6:0]limite_x;
    reg [5:0]limite_y;
 
 
-   // instantiate font ROM
+   // Módulo que devuelve 8 bits de cada fila en la letra escogida
    font_rom font_unit
       (.clk(clk), .addr(rom_addr), .data(font_word));
   
-   
+  // CUERPO
+  
+   // El escalamiento se hace dependiendo de la combinación escogida con los interruptores
    always @*
         case(escala)
-            2'b00: 
+            2'b00:                            // Si se escoge 00 el texto se muestra en tamaño 16*8
                 begin
                     pix_x = pixel_x[2:0];
                     pix_y = pixel_y[3:0];
@@ -51,7 +76,7 @@ module font_test_gen
                     limite_y = pixel_y[9:4];
                 end
                 
-            2'b01:
+            2'b01:                           // Si se escoge 01 el texto se muestra en tamaño 32*16
                 begin
                     pix_x = pixel_x[3:1];               
                     pix_y = pixel_y[4:1];
@@ -60,7 +85,7 @@ module font_test_gen
                     limite_x = pixel_x[9:4];
                     limite_y = pixel_y[9:5];
                 end
-            2'b10:
+            2'b10:                           // Si se escoge 10 el texto se muestra en tamaño 64*32
                 begin
                     pix_x = pixel_x[4:2];               
                     pix_y = pixel_y[5:2];
@@ -71,31 +96,39 @@ module font_test_gen
                 end
         endcase
         
+   // text_bit_on es 1 si los contadores de tiles limite_x y limite_y estan dentro de area para mostrar el texto
+   
    assign text_bit_on = limite_x >= cord_x && limite_x <= cord_x+11 && limite_y == cord_y;
+   
+   // Se asigna el rango de bits de acuerdo al escalamiento escogido
    assign row_addr_g = pix_y; 
    assign bit_addr_g = pix_x;
    
+   
+   // siempre y cuando se tengan todas las entradas activas
+   
    always @*
-   if(text_bit_on)
+   if(text_bit_on)                  // Si se está dentro del área para mostrar el texto
    begin
-          case (limite_x)
-              cord_x: char_addr_g = 7'h48;
-              cord_x+1: char_addr_g = 7'h45;
-              cord_x+2: char_addr_g = 7'h4c;
-              cord_x+3: char_addr_g = 7'h4c;
-              cord_x+4: char_addr_g = 7'h4f;
-              cord_x+5: char_addr_g = 7'h00;
-              cord_x+6: char_addr_g = 7'h57;  
-              cord_x+7: char_addr_g = 7'h4f;
-              cord_x+8: char_addr_g = 7'h52;
-              cord_x+9: char_addr_g = 7'h4c;
-              cord_x+10: char_addr_g = 7'h44;
-              cord_x+11: char_addr_g = 7'h21;   
+          case (limite_x)           // Según la ubicación dada por el contador en x de los tiles que pinte la letra requerida
+              cord_x: char_addr_g = 7'h48;             // H
+              cord_x+1: char_addr_g = 7'h45;           // E
+              cord_x+2: char_addr_g = 7'h4c;           // L
+              cord_x+3: char_addr_g = 7'h4c;           // L
+              cord_x+4: char_addr_g = 7'h4f;           // O
+              cord_x+5: char_addr_g = 7'h00;           // _
+              cord_x+6: char_addr_g = 7'h57;           // W
+              cord_x+7: char_addr_g = 7'h4f;           // O
+              cord_x+8: char_addr_g = 7'h52;           // R
+              cord_x+9: char_addr_g = 7'h4c;           // L
+              cord_x+10: char_addr_g = 7'h44;          // D
+              cord_x+11: char_addr_g = 7'h21;          // !
               default char_addr_g = 7'h00;
           endcase
     end
     
-    
+ // Para hacer actualización de las variables para formar las letras
+ 
  always @*
         begin
             if (text_bit_on)
@@ -103,13 +136,13 @@ module font_test_gen
                     char_addr = char_addr_g;
                     row_addr = row_addr_g;
                     bit_addr = bit_addr_g;
-                    if (~font_bit)
-                        rgb_text = 3'b000; // blank
+                    if (~font_bit)                 // Si no se está dentro del área de texto que el color sea negro
+                        rgb_text = 3'b000;
                     else
-                        rgb_text = Cable_Color;  // green
+                        rgb_text = Cable_Color;    // Caso contario que se pinte del color seleccionado por los interruptores de entrada
                  end
              else
-                 rgb_text = 3'b000;  // black
+                 rgb_text = 3'b000;  
          end
            
         assign rom_addr = {char_addr, row_addr};
