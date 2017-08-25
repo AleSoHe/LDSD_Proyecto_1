@@ -1,0 +1,105 @@
+`timescale 1ns / 1ps
+
+module Our_names(
+    input wire clk,
+    input wire [9:0] pixel_x, pixel_y,
+    output reg [2:0] rgb_text
+    );
+    
+    
+    wire [10:0] rom_addr;
+    wire [7:0] font_word;
+    wire font_bit, text_bit_on1, text_bit_on2, text_bit_on3;
+    wire [3:0] row_addr;
+    wire [2:0] bit_addr;
+    reg [3:0] row_addr_g;
+    reg [2:0] bit_addr_g;
+    reg [6:0] char_addr, char_addr_g;
+    
+    
+    font_rom font_unit
+         (.clk(clk), .addr(rom_addr), .data(font_word));
+         
+    assign text_bit_on1 = pixel_x[9:3] >= 68 && pixel_x[9:3] < 77 && pixel_y[9:4] == 27;
+    assign text_bit_on2 = pixel_x[9:3] >= 68 && pixel_x[9:3] < 78 && pixel_y[9:4] == 28;
+    assign text_bit_on3 = pixel_x[9:3] >= 68 && pixel_x[9:3] < 79 && pixel_y[9:4] == 29;
+    
+    assign row_addr = pixel_y[3:0];
+    assign bit_addr = pixel_x[2:0];
+    
+    always @*
+    if (text_bit_on1 || text_bit_on2 || text_bit_on3)
+    begin
+        case (pixel_y[9:4])
+            6'd27:
+                begin
+                    case (pixel_x [9:3])
+                        7'd68: char_addr_g = 8'h41;
+                        7'd69: char_addr_g = 8'h4c;
+                        7'd70: char_addr_g = 8'h45;
+                        7'd71: char_addr_g = 8'h00;
+                        7'd72: char_addr_g = 8'h53;
+                        7'd73: char_addr_g = 8'h4f;
+                        7'd74: char_addr_g = 8'h4c;
+                        7'd75: char_addr_g = 8'h49;
+                        7'd76: char_addr_g = 8'h53;
+                        default char_addr_g = 8'h00;
+                    endcase
+                end
+            6'd28:
+                begin
+                    case (pixel_x [9:3])
+                        7'd68: char_addr_g = 8'h4d;
+                        7'd69: char_addr_g = 8'h41;
+                        7'd70: char_addr_g = 8'h58;
+                        7'd71: char_addr_g = 8'h00;
+                        7'd72: char_addr_g = 8'h48;
+                        7'd73: char_addr_g = 8'h52;
+                        7'd74: char_addr_g = 8'h4f;
+                        7'd75: char_addr_g = 8'h4e;
+                        7'd76: char_addr_g = 8'h45;
+                        7'd77: char_addr_g = 8'h4b;
+                        default char_addr_g = 8'h00;
+                    endcase
+                end
+            6'd29:
+                begin
+                case (pixel_x [9:3])
+                        7'd68: char_addr_g = 8'h42;
+                        7'd69: char_addr_g = 8'h45;
+                        7'd70: char_addr_g = 8'h53;
+                        7'd71: char_addr_g = 8'h53;
+                        7'd72: char_addr_g = 8'h59;
+                        7'd73: char_addr_g = 8'h00;
+                        7'd74: char_addr_g = 8'h55;
+                        7'd75: char_addr_g = 8'h52;
+                        7'd76: char_addr_g = 8'h52;
+                        7'd77: char_addr_g = 8'h45;
+                        7'd78: char_addr_g = 8'h41;
+                        default char_addr_g = 8'h00;
+                    endcase
+                end
+        endcase
+          
+    end
+    
+    
+    always @*
+            begin
+                if (text_bit_on1 || text_bit_on2 || text_bit_on3)
+                    begin
+                        char_addr = char_addr_g;
+                        row_addr_g = row_addr;
+                        bit_addr_g = bit_addr;
+                        if (~font_bit)                 // Si no se está dentro del área de texto que el color sea negro
+                            rgb_text = 3'b000;
+                        else
+                            rgb_text = 3'b110;    // Caso contario que se pinte del color seleccionado por los interruptores de entrada
+                     end
+                 else
+                     rgb_text = 3'b000;  
+             end
+               
+            assign rom_addr = {char_addr, row_addr_g};
+            assign font_bit = font_word[~bit_addr_g];
+endmodule
