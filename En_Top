@@ -1,0 +1,16 @@
+Our_names nombres(
+    .clk(CableP_tick), 
+    .pixel_x(CableX), 
+    .pixel_y(CableY),
+    .rgb_text(NamRGB));
+    
+    
+  always @*
+         if (video_on)
+          begin 
+             if (CableY[9:0] < 10'd350)
+                rgb_reg <= Cablergb;
+             else
+                rgb_reg <= NamRGB;
+          end
+       assign rgb = rgb_reg;
